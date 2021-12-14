@@ -264,9 +264,11 @@ ifneq ($(CPPUTEST_USE_VPATH), Y)
 endif
 
 ifndef TARGET_PLATFORM
-CPPUTEST_LIB_LINK_DIR = $(CPPUTEST_HOME)/lib
+#CPPUTEST_LIB_LINK_DIR = $(CPPUTEST_HOME)/lib
+CPPUTEST_LIB_LINK_DIR = $(CPPUTEST_HOME)/cpputest_build/lib
 else
-CPPUTEST_LIB_LINK_DIR = $(CPPUTEST_HOME)/lib/$(TARGET_PLATFORM)
+CPPUTEST_LIB_LINK_DIR = $(CPPUTEST_HOME)/cpputest_build/lib/$(TARGET_PLATFORM)
+#CPPUTEST_LIB_LINK_DIR = $(CPPUTEST_HOME)/lib/$(TARGET_PLATFORM)
 endif
 
 # --------------------------------------
@@ -428,6 +430,7 @@ ifeq ($(CPPUTEST_USE_GCOV), Y)
 		LD_LIBRARIES += --coverage
 	else
 		LD_LIBRARIES += -lgcov
+#		LDFLAGS += -lgcov --coverage
 	endif
 endif
 
@@ -501,8 +504,13 @@ $(TARGET_LIB): $(OBJ)
 	$(SILENCE)$(RANLIB) $@
 
 TEST_RUN_RETURN_CODE_FILE:=$(shell mktemp /tmp/cpputestResult.XXX)
+
+#EDIT
+#CPPUTEST_SWITCHES += -c
+CPPUTEST_SWITCHES += -ojunit
+
 test: $(TEST_TARGET)
-	($(RUN_TEST_TARGET); echo $$? > $(TEST_RUN_RETURN_CODE_FILE)) | tee $(TEST_OUTPUT)
+	($(RUN_TEST_TARGET) $(CPPUTEST_SWITCHES); echo $$? > $(TEST_RUN_RETURN_CODE_FILE)) | tee $(TEST_OUTPUT)
 	@ret=$$(cat $(TEST_RUN_RETURN_CODE_FILE)); rm $(TEST_RUN_RETURN_CODE_FILE); if [ "$$ret" -ne 0 ]; then echo "$$(tput setaf 1)$(TEST_TARGET) returned $${ret}$$(tput sgr0)"; fi; exit $$ret
 
 vtest: $(TEST_TARGET)
@@ -562,6 +570,11 @@ endif
 	$(SILENCE)mv *.gcov gcov
 	$(SILENCE)mv gcov_* gcov
 	@echo "See gcov directory for details"
+
+gcovr: clean test
+	$(SILENCE)gcovr  -r . --html -o gcovr_report.html
+	$(SILENCE)xunit-viewer -r cpputest_*.xml 
+	@echo "See gcovr directory for details"
 
 .PHONY: format
 format:
